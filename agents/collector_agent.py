@@ -49,6 +49,14 @@ async def parse_transaction_text(user_input: str) -> dict | None:
                 text = text[:-3]
                 
             data = json.loads(text.strip())
+            
+            # If Gemini mistakenly returns a list (e.g., `[{...}]`), take the first item
+            if isinstance(data, list):
+                if len(data) > 0:
+                    data = data[0]
+                else:
+                    return None
+                    
             return data
             
         except Exception as e:
