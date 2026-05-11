@@ -34,14 +34,25 @@ User Message: "{user_input}"
 
 async def parse_transaction_text(user_input: str) -> dict | None:
     """Use Gemini to parse natural language transaction text, with fallback models."""
-    # Use string concatenation instead of .format() to prevent KeyError
-    # if user input contains curly braces (e.g. JSON text, code, etc.)
     prompt = PROMPT_TEMPLATE + f'\nUser Message: "{user_input}"'
+    return await _run_gemini_parsing(prompt)
+
+async def parse_transaction_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict | None:
+    """Use Gemini to parse a receipt image directly, bypassing Tesseract."""
+    prompt = PROMPT_TEMPLATE + '\nUser Message: "Please extract the transaction details from this image."'
+    image_part = {
+        "mime_type": mime_type,
+        "data": image_bytes
+    }
+    return await _run_gemini_parsing([prompt, image_part])
+
+async def _run_gemini_parsing(contents) -> dict | None:
+    """Helper to run the Gemini fallback loop for text or multimodal contents."""
     
     for model_name in FALLBACK_MODELS:
         try:
             model = genai.GenerativeModel(model_name)
-            response = await model.generate_content_async(prompt)
+            response = await model.generate_content_async(contents)
             text = response.text.strip()
             
             # Clean up possible markdown code blocks from Gemini response
@@ -68,5 +79,5 @@ async def parse_transaction_text(user_input: str) -> dict | None:
             continue # Try the next model in the list
             
     # If all 5 models fail
-    logger.error("All 5 Gemini fallback models failed", user_input=user_input)
+    logger.error("All 5 Gemini fallback models failed")
     return None

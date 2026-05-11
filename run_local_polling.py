@@ -2,7 +2,7 @@ import sys
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from config.settings import settings
-from bot.handlers import handle_text_message, handle_photo_message
+from bot.handlers import handle_text_message, handle_photo_message, handle_pdf_message
 from bot.commands import (
     cmd_log,
     cmd_emi,
@@ -50,6 +50,7 @@ def main():
     bot_app.add_handler(CommandHandler("export", cmd_export))
     bot_app.add_handler(CommandHandler("history", cmd_history))
     bot_app.add_handler(MessageHandler(filters.PHOTO, handle_photo_message))
+    bot_app.add_handler(MessageHandler(filters.Document.PDF, handle_pdf_message))
     bot_app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message)
     )

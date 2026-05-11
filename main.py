@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
         
         # Add basic /start handler for testing
         from telegram.ext import CommandHandler, MessageHandler, filters
-        from bot.handlers import handle_text_message, handle_photo_message
+        from bot.handlers import handle_text_message, handle_photo_message, handle_pdf_message
         from bot.commands import (
             cmd_log, cmd_emi, cmd_summary,
             cmd_report, cmd_compare, cmd_export, cmd_history,
@@ -51,6 +51,7 @@ async def lifespan(app: FastAPI):
         bot_app.add_handler(CommandHandler("export", cmd_export))
         bot_app.add_handler(CommandHandler("history", cmd_history))
         bot_app.add_handler(MessageHandler(filters.PHOTO, handle_photo_message))
+        bot_app.add_handler(MessageHandler(filters.Document.PDF, handle_pdf_message))
         bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
         
         await bot_app.initialize()
