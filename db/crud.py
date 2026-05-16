@@ -51,8 +51,7 @@ async def add_transaction(
     await session.commit()
     await session.refresh(txn)
     logger.info("Transaction added", user_id=user_id, amount=txn.amount, type=txn.type)
-    
-    # Auto-embed into Vector Store
+    # Auto-embed into Vector Store (new transactions are indexed immediately)
     embed_transaction(txn)
     
     return txn
