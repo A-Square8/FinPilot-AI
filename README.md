@@ -41,43 +41,43 @@ Telegram Bot: @kharchabot_AI_assistant_bot
 
 ```mermaid
 flowchart TD
-    User["Telegram User"] --> Msg["Text Message"]
-    User --> Photo["Receipt Photo"]
-    User --> Doc["PDF Document"]
+    User[Telegram User] --> Msg[Text Message]
+    User --> Photo[Receipt Photo]
+    User --> Doc[PDF Document]
 
-    Doc -->|"PyMuPDF Text Extract"| Extractor["Data Extraction Engine"]
-    Photo -->|"Gemini Multimodal"| Extractor
+    Doc -->|PyMuPDF Text Extract| Extractor[Data Extraction Engine]
+    Photo -->|Gemini Multimodal| Extractor
 
-    Msg --> Router{"Global Intent Router"}
+    Msg --> Router{Global Intent Router}
     Extractor --> Router
 
-    Router -->|"Intent: log/expense"| Collector["Collector Agent"]
-    Router -->|"Intent: search/query"| Search["Search Agent (Hybrid Retrieval)"]
-    Router -->|"Intent: advice/budget"| Advisor["Advisor Agent (Stage 3)"]
-    Router -->|"Intent: stocks/portfolio"| Investor["Investor Agent (Future)"]
+    Router -->|Intent log/expense| Collector[Collector Agent]
+    Router -->|Intent search/query| Search[Search Agent Hybrid Retrieval]
+    Router -->|Intent advice/budget| Advisor[Advisor Agent Stage 3]
+    Router -->|Intent stocks/portfolio| Investor[Investor Agent Future]
 
-    Collector --> ParseCat{"Parse & Categorize"}
-    ParseCat -->|"Single / Multi Txn"| DBWrite["Write to PostgreSQL"]
-    DBWrite --> AutoEmbed["Auto-Embed to Vector Store"]
-    AutoEmbed --> ChromaDB[("ChromaDB")]
+    Collector --> ParseCat{Parse and Categorize}
+    ParseCat -->|Single or Multi Txn| DBWrite[Write to PostgreSQL]
+    DBWrite --> AutoEmbed[Auto-Embed to Vector Store]
+    AutoEmbed --> ChromaDB[(ChromaDB)]
     
-    Search --> IntentClass{"Search Intent Classification"}
-    IntentClass -->|"structured"| SQLPath["SQL Query (Exact Match)"]
-    IntentClass -->|"semantic"| VectorPath["Vector Search (Fuzzy Match)"]
+    Search --> IntentClass{Search Intent Classification}
+    IntentClass -->|structured| SQLPath[SQL Query Exact Match]
+    IntentClass -->|semantic| VectorPath[Vector Search Fuzzy Match]
     
-    SQLPath -->|"0 results + has keyword"| VectorPath
-    SQLPath --> FetchDB["Fetch Full Transactions"]
-    VectorPath --> FetchChroma["Query Top K Docs"]
+    SQLPath -->|0 results and has keyword| VectorPath
+    SQLPath --> FetchDB[Fetch Full Transactions]
+    VectorPath --> FetchChroma[Query Top K Docs]
     FetchChroma --> FetchDB
     
-    FetchDB --> PythonStats["Python Stats Computation"]
-    PythonStats --> Synthesis["Gemini Answer Synthesis"]
-    Synthesis --> Output["Chat Response"]
+    FetchDB --> PythonStats[Python Stats Computation]
+    PythonStats --> Synthesis[Gemini Answer Synthesis]
+    Synthesis --> Output[Chat Response]
     
-    Advisor --> BudgetEngine["Budget Analysis"] --> Output
-    Investor --> MarketAPI["External Market API"] --> Output
+    Advisor --> BudgetEngine[Budget Analysis] --> Output
+    Investor --> MarketAPI[External Market API] --> Output
     
-    Supabase[("Supabase PostgreSQL")]
-    DBWrite -.-> Supabase
-    FetchDB -.-> Supabase
+    Supabase[(Supabase PostgreSQL)]
+    DBWrite -.->|Save Data| Supabase
+    FetchDB -.->|Read Data| Supabase
 ```
