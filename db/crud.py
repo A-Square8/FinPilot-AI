@@ -1,6 +1,6 @@
 from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, or_
 from db.models import User, Transaction
 from vector_store.chroma_client import embed_transaction
 import structlog
@@ -157,5 +157,72 @@ async def get_all_transactions(session: AsyncSession, user_id: int) -> list[Tran
         select(Transaction)
         .where(Transaction.user_id == user_id)
         .order_by(Transaction.txn_date.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def search_transactions_by_filters(
+    session: AsyncSession,
+    user_id: int,
+    categories: list[str] | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    txn_type: str | None = None,
+    description_keyword: str | None = None,
+    limit: int = 50,
+) -> list[Transaction]:
+    """Search transactions using structured SQL filters (category, date range, keyword, type)."""
+    conditions = [Transaction.user_id == user_id]
+
+    if categories:
+        cat_filters = [func.lower(Transaction.category) == cat.lower() for cat in categories]
+        conditions.append(or_(*cat_filters))
+
+    if date_from:
+        conditions.append(Transaction.txn_date >= date_from)
+    if date_to:
+        conditions.append(Transaction.txn_date <= date_to)
+
+    if txn_type:
+        conditions.append(Transaction.type == txn_type)
+
+    if description_keyword:
+        keyword_pattern = f"%{description_keyword}%"
+        conditions.append(
+            or_(
+                Transaction.description.ilike(keyword_pattern),
+                Transaction.raw_input.ilike(keyword_pattern),
+            )
+        )
+
+    result = await session.execute(
+        select(Transaction)
+        .where(and_(*conditions))
+        .order_by(Transaction.txn_date.desc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def get_distinct_categories(session: AsyncSession, user_id: int) -> list[str]:
+    """Return all distinct category names for a user's transactions."""
+    result = await session.execute(
+        select(Transaction.category)
+        .where(and_(Transaction.user_id == user_id, Transaction.category.isnot(None)))
+        .distinct()
+    )
+    return [row[0] for row in result.all()]
+
+
+async def get_transactions_by_ids(
+    session: AsyncSession, txn_ids: list[int]
+) -> list[Transaction]:
+    """Fetch transactions by a list of IDs (used for vector→SQL hybrid path)."""
+    if not txn_ids:
+        return []
+    result = await session.execute(
+        select(Transaction)
+        .where(Transaction.id.in_(txn_ids))
+        .order_by(Transaction.txn_date.desc())
     )
     return list(result.scalars().all())

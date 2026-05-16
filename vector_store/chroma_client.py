@@ -76,8 +76,14 @@ def embed_transaction(txn: Transaction) -> None:
         logger.error("Failed to embed transaction in ChromaDB", error=str(e), txn_id=txn.id)
 
 
-def search_transactions(user_id: int, query: str, n_results: int = 5) -> list[str]:
-    """Search for relevant transactions using asymmetric query embedding."""
+def search_transactions(
+    user_id: int, query: str, n_results: int = 5
+) -> tuple[list[int], list[str]]:
+    """Search for relevant transactions using asymmetric query embedding.
+    
+    Returns:
+        Tuple of (transaction_ids, document_strings). Both lists are parallel.
+    """
     try:
         # Embed query with RETRIEVAL_QUERY task type (asymmetric to stored documents)
         query_embedding = _query_embedder([query])
@@ -90,20 +96,28 @@ def search_transactions(user_id: int, query: str, n_results: int = 5) -> list[st
         )
 
         if not results or not results.get("documents") or not results["documents"][0]:
-            return []
+            return [], []
 
         docs = results["documents"][0]
         distances = results["distances"][0]
+        ids = results["ids"][0]
 
         # Filter out results beyond the relevance threshold
-        filtered = []
-        for doc, dist in zip(docs, distances):
+        filtered_ids = []
+        filtered_docs = []
+        for doc, dist, chroma_id in zip(docs, distances, ids):
             if dist <= MAX_DISTANCE_THRESHOLD:
-                filtered.append(doc)
+                filtered_docs.append(doc)
+                # Extract numeric ID from "txn_7" format
+                try:
+                    txn_id = int(chroma_id.split("_")[1])
+                    filtered_ids.append(txn_id)
+                except (IndexError, ValueError):
+                    filtered_ids.append(-1)
             else:
                 logger.debug("Discarded low-relevance result", distance=dist)
 
-        return filtered
+        return filtered_ids, filtered_docs
     except Exception as e:
         logger.error("Semantic search failed", error=str(e), user_id=user_id)
-        return []
+        return [], []
